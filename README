@@ -1,8 +1,11 @@
 .. -*-restructuredtext-*-
 
+.. role:: raw-html(raw)
+   :format: html
 
 ======
 JobJob
 ======
 
-Django is a high-level Python ~~Web~~ framework that encourages rapid development and clean, pragmatic design.
+:raw-html:`<del>Django</del>` **JobJob** is a high-level Python :raw-html:`<del>Web</del>` framework that encourages rapid development and clean, pragmatic design.
+
