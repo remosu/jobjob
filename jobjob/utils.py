@@ -4,6 +4,7 @@ import os
 import numpy as np
 from functools import wraps
 import glob
+import itertools
 
 
 def copy_input(src, dst, **input_vars):
@@ -23,6 +24,44 @@ def copy_input(src, dst, **input_vars):
     
 def change_input(src, **input_vars):
     copy_input(src, src, **input_vars)
+
+def mk_jobdir(input_vars):
+    reprv = dict(D_minus='D', ch_objects='Q')
+    launch_tmpl = '''
+    #!/bin/bash
+    #PBS -l nodes=1
+    #PBS -N %(STRING)s
+    #PBS -q exe 
+
+    pbstmp=$scratch/$PBS_JOBID
+    mkdir out
+    mkdir $pbstmp
+    cp *.bin par_* $pbstmp/
+    touch $PBS_JOBID
+    cd $pbstmp
+
+    elb %(INFILE)s > log_%(INFILE)s
+
+    scp  * nodo0:$PBS_O_WORKDIR/out/
+    '''
+    for values in itertools.product(*input_vars.values()):
+        a = dict(zip(input_vars.keys(), values))
+        jobname = ''.join('%s%s'%(reprv.get(k,k), v) 
+                          for k, v in a.items() if k != 'restart')
+        a['D_plus'] = a['D_minus']
+        a['output'] = jobname
+        print jobname
+        if not os.path.exists(jobname):
+            os.mkdir(jobname)
+        par_filename = 'par_'+jobname
+        launch_filename = 'launch_'+jobname+'.sh'
+        dst = os.path.join(jobname, par_filename)
+        copy_input('par_tmpl', dst, **a)
+        launch_text = launch_tmpl % {'INFILE':par_filename, 
+                                     'STRING':'elb_'+jobname}
+        open(os.path.join(jobname, launch_filename), 'w').write(launch_text)
+        os.system('chmod +x '+os.path.join(jobname, launch_filename))
+      
             
             
 def get_value(str_value):
@@ -90,5 +129,3 @@ class Cds(object):
             self.omega = _point()
             self.magnetic_dipole = _point()
             self.deltaphi = float(cds.readline())
-
-

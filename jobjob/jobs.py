@@ -29,6 +29,19 @@ class Job(object):
         data_filename_mask = os.path.join(self.path, 'log_*')
         data_filenames = glob.glob(data_filename_mask)
         return data_filenames[0]
+
+    def get_binfile(self):
+        data_filename_mask = os.path.join(self.path, 
+                                          '*_Ch_field_*.bin')
+        data_filenames = glob.glob(data_filename_mask)
+        return data_filenames[0]
+
+
+    def __str__(self):
+        return self.make_key('ch_objects', 'u_x', 'D_minus')
+
+    def __repr__(self):
+        return str(self)
     
     @property
     @cache_result()
@@ -51,7 +64,8 @@ class Job(object):
     @property
     @cache_result()
     def HydroForce_c10(self):
-            pass
+        pass
+            
 
     @property
     @cache_result()
@@ -92,16 +106,22 @@ class Job(object):
         print 'loading data...'
         adata = self.pos_cpm
         print 'data loaded!'
-        pos_10 = self.position(10)
-        pos_11 = self.position(11)
-        pos = adata[:, :3] - (37.5, 50.0, 50.0)
+        #pos_10 = self.position(0)
+        #pos_11 = self.position(1)
+        #center = (pos_10 + pos_11) / 2.0
+        mask = np.zeros((1000000, 3))
+        center = np.array([2.0,2.0,1.0])
+        #mask[int(center[0])*10000:, 0] = 100
+        pos = adata[:, :3] - center
         c_p = adata[:, -2]
         c_p.shape = (-1, 1)
         c_m = adata[:, -1]
         c_m.shape = (-1, 1)
         
         ccp = (pos * c_p).sum(axis=0)
+        print ccp
         ccm = (pos * c_m).sum(axis=0)
+        print ccm
         return ccp - ccm
         
     @property
@@ -111,14 +131,19 @@ class Job(object):
         print 'loading data...'
         adata = self.pos_cpm
         print 'data loaded!'
-        pos = adata[:, :3]
+        mask = np.zeros((1000000, 3))
+        center = np.array([2.0, 2.0, 1.0])
+        #mask[int(center[0])*10000:, 0] = 100
+        pos = adata[:, :3] - center#- np.array([50.5, 50.5, 49.5])
         c_p = adata[:, -2]
         c_p.shape = (-1, 1)
         c_m = adata[:, -1]
         c_m.shape = (-1, 1)
         
         ccp = (pos * c_p).sum(axis=0) / c_p.sum()
+        print ccp
         ccm = (pos * c_m).sum(axis=0) / c_m.sum()
+        print ccm
         return ccp - ccm
         
         
@@ -149,20 +174,34 @@ class Job(object):
         
     @property
     @cache_result()
-    def totalcharge(self):
+    def totalcharge(self): #FIXME: use the real positions and r_pair
         data_filename = self.get_field_last()
         ct_10 = 0
         ct_11 = 0
+        pos10 = self.position(0)
+        pos11 = self.position(1)
+        r = self.r_eff
+        rm = r + self.r_pair / 2
         for line in open(data_filename):
             values = line.split()
             pos = np.array(values[:3], dtype=float)
-            pos10 = np.array([25.0, 50.0, 50.0])
-            pos11 = np.array([50.0, 50.0, 50.0])
-            if 10.0 < np.linalg.norm(pos - pos10) < 12.5:
+            #pos10 = np.array([25.0, 50.0, 50.0])
+            #pos11 = np.array([50.0, 50.0, 50.0])
+            distance10 = np.linalg.norm(pos - pos10) 
+            distance11 = np.linalg.norm(pos - pos11) 
+            if r < distance10 < rm:
                 ct_10 += float(values[-1])
-            elif 10.0 < np.linalg.norm(pos - pos11) < 12.5:
+            elif r < distance11 < rm:
                 ct_11 += float(values[-1])
+
         return [ct_10, ct_11]
     
+    @property
+    def job_id(self):
+        """docstring for job_id"""
+        return "Q%03dU%.5fD%.5fR%02d" % (self.ch_objects,
+                                 self.u_x,
+                                 self.D_minus,
+                                 self.r_pair)
     
         
