@@ -54,13 +54,15 @@ class Job(object):
         
         data_filename = self.get_field_last()
         data = open(data_filename)
-        vs = np.array([float(line.split()[3]) #TODO: only for u_x
+        vs = np.array([map(float, line.split()[3:6]) 
                       for line in data if any(line.startswith(s) for s in starts)])
         return vs
 
     @property
     def Pe(self):
-        return self.v_inf.mean() * self.r_eff / self.D_minus
+        print self.v_inf.mean(axis=0)
+        print self.r_eff, self.D_minus
+        return np.sum(self.v_inf.mean(axis=0)**2)**0.5 * self.r_eff / self.D_minus
         
     @property
     @cache_result()
