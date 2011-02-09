@@ -11,6 +11,7 @@ class Job(object):
     def __init__(self, path, input='input'):
         self.path = path
         self.input = input
+        print path, input
         self.load_input(os.path.join(self.path, input))
         
     def load_input(self, input_filename):
@@ -53,7 +54,7 @@ class Job(object):
         
         data_filename = self.get_field_last()
         data = open(data_filename)
-        vs = np.array([float(line.split()[3]) 
+        vs = np.array([float(line.split()[3]) #TODO: only for u_x
                       for line in data if any(line.startswith(s) for s in starts)])
         return vs
 
@@ -106,13 +107,15 @@ class Job(object):
         print 'loading data...'
         adata = self.pos_cpm
         print 'data loaded!'
-        #pos_10 = self.position(0)
-        #pos_11 = self.position(1)
-        #center = (pos_10 + pos_11) / 2.0
-        mask = np.zeros((1000000, 3))
-        center = np.array([2.0,2.0,1.0])
-        #mask[int(center[0])*10000:, 0] = 100
-        pos = adata[:, :3] - center
+        pos_10 = self.position(0)
+        pos_11 = self.position(1)
+        center = (pos_10 + pos_11) / 2.0
+        mask = np.zeros(adata[:, :3].shape)
+        mask[int(50.5+center[0])*10000:, 0] = 100
+        print adata[:,:3].shape
+        print mask.shape
+        pos = adata[:, :3] - mask
+        pos -= center
         c_p = adata[:, -2]
         c_p.shape = (-1, 1)
         c_m = adata[:, -1]
@@ -131,10 +134,19 @@ class Job(object):
         print 'loading data...'
         adata = self.pos_cpm
         print 'data loaded!'
-        mask = np.zeros((1000000, 3))
-        center = np.array([2.0, 2.0, 1.0])
+        #mask = np.zeros((1000000, 3))
+        #center = np.array([50.5, 50.5, 49.5])
         #mask[int(center[0])*10000:, 0] = 100
-        pos = adata[:, :3] - center#- np.array([50.5, 50.5, 49.5])
+        #pos = adata[:, :3] - center#- np.array([50.5, 50.5, 49.5])
+        pos_10 = self.position(0)
+        pos_11 = self.position(1)
+        center = (pos_10 + pos_11) / 2.0
+        mask = np.zeros(adata[:, :3].shape)
+        mask[int(50.5+center[0])*10000:, 0] = 100
+        print adata[:,:3].shape
+        print mask.shape
+        pos = adata[:, :3] - mask
+        pos -= center
         c_p = adata[:, -2]
         c_p.shape = (-1, 1)
         c_m = adata[:, -1]
@@ -174,7 +186,7 @@ class Job(object):
         
     @property
     @cache_result()
-    def totalcharge(self): #FIXME: use the real positions and r_pair
+    def totalcharge(self): 
         data_filename = self.get_field_last()
         ct_10 = 0
         ct_11 = 0

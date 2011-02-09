@@ -97,7 +97,7 @@ def cache_result(filename=None):
             job = args[0] if args else kwds['sim']
             cache_filename_abs = os.path.join(job.path, cache_filename)
             if os.path.exists(cache_filename_abs):
-                #print cache_filename
+                #print cache_filename_abs
                 return np.loadtxt(cache_filename_abs)
             result = f(*args, **kwds)
             print 'caching data to:', cache_filename_abs
@@ -129,3 +129,7 @@ class Cds(object):
             self.omega = _point()
             self.magnetic_dipole = _point()
             self.deltaphi = float(cds.readline())
+
+
+def job_name_from_log(log_filename):
+    return os.path.split(log_filename)[-1][8:]
