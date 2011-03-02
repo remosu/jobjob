@@ -76,6 +76,7 @@ def get_value(str_value):
 
 def read_vars(input_filename):
     """..."""
+    #print input_filename
     for line in open(input_filename):
         values = line.split()
         if values and not values[0].startswith('#'):
@@ -133,3 +134,8 @@ class Cds(object):
 
 def job_name_from_log(log_filename):
     return os.path.split(log_filename)[-1][8:]
+
+
+def get_jobs_from_tmpl(tmpl):
+    return [jobjob.jobs.Job(*os.path.split(input))
+            for input in glob.glob(tmpl)]

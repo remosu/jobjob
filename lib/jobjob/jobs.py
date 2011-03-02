@@ -11,14 +11,25 @@ class Job(object):
     def __init__(self, path, input='input'):
         self.path = path
         self.input = input
-        print path, input
         self.load_input(os.path.join(self.path, input))
         
     def load_input(self, input_filename):
         self.__dict__.update(dict(read_vars(input_filename)))
         
     def make_key(self, *jobvars):
-        return ''.join(var+str(getattr(self, var)) for var in jobvars)
+        return ''.join(var+str(float(getattr(self, var))) for var in jobvars)
+
+    def oelb_at_step(self, step):
+        """docstring for oelb_at_step"""
+        mask = os.path.join(self.path, 'oelb_lattice_*_%d.elb'%step)
+        filenames = glob.glob(mask)
+        return filenames[0] if filenames else None
+        
+    def get_fields(self):
+        data_filename_mask = os.path.join(self.path, 'oelb_lattice_*.elb')
+        data_filenames = glob.glob(data_filename_mask)
+        data_filenames.sort(key=lambda s: int(s.rpartition('_')[-1].split('.')[0]))
+        return data_filenames
         
     def get_field_last(self):
         data_filename_mask = os.path.join(self.path, 'oelb_lattice_*.elb')
@@ -60,8 +71,6 @@ class Job(object):
 
     @property
     def Pe(self):
-        print self.v_inf.mean(axis=0)
-        print self.r_eff, self.D_minus
         return np.sum(self.v_inf.mean(axis=0)**2)**0.5 * self.r_eff / self.D_minus
         
     @property
@@ -218,4 +227,50 @@ class Job(object):
                                  self.D_minus,
                                  self.r_pair)
     
+    @property
+    def u_abs(self):
+        """docstring for u_abs"""
+        return (self.u_x**2 + self.u_y**2 + self.u_z**2)**0.5
+
+    def potential(self):
+        """docstring for potential"""
+        print self.position(0), self.position(1)
+        print self.get_fields()
+        data_fn = self.get_fields()[0]  
+        data = np.loadtxt(data_fn)
+        print data.shape
+        pos = self.position(0)
+        new_data_short = np.array([line[[7,11,12]] 
+                                for line in data \
+                                if line[1]==pos[1] and line[2]==pos[2]])
+        print new_data_short.shape
+        pot_p = np.log(new_data_short[:, 1]) + new_data_short[:, 0]
+        pot_m = np.log(new_data_short[:, 2]) - new_data_short[:, 0]
+
+    @cache_result()
+    def pot(self, step):
+        """docstring for pot"""
+        oelb_filename = self.oelb_at_step(step)
+        data = np.loadtxt(oelb_filename)
+        print data.shape
+        #pos = self.position(0)
+        pos = [0, 50., 50.]
+        data_short = np.array([line[[7,11,12]] 
+                                for line in data \
+                                if line[1]==pos[1] and line[2]==pos[2]])
+        print data_short.shape
+        phi = data_short[:, 0]
+        ch_p = data_short[:, 1]
+        ch_m = data_short[:, 2]
+        ch_mp = np.zeros(ch_m.shape)
+        indx = ch_m < 0
+        ch_mp[indx] = ch_m[indx]
+        ch_p -= ch_mp
+        pot_p = np.log(ch_p) + phi 
+        pot_m = np.log(ch_m) - phi
+        pot_p.shape = -1, 1
+        pot_m.shape = -1, 1
+        return np.hstack((pot_p, pot_m))
         
+        
+
